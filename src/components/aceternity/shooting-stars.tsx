@@ -41,106 +41,194 @@ const getRandomStartPoint = () => {
       return { x: 0, y: 0, angle: 45 };
   }
 };
-export const ShootingStars: React.FC<ShootingStarsProps> = ({
-  minSpeed = 10,
-  maxSpeed = 30,
-  minDelay = 1200,
-  maxDelay = 4200,
-  starColor = "#9E00FF",
-  trailColor = "#2EB9DF",
-  starWidth = 10,
-  starHeight = 1,
-  className,
-}) => {
-  const [star, setStar] = useState<ShootingStar | null>(null);
-  const svgRef = useRef<SVGSVGElement>(null);
+
+interface StarProps {
+  id: number;
+  x: number;
+  y: number;
+  angle: number;
+  prevAngle: number;
+  speed: number;
+  prevSpeed: number;
+  size: number;
+  prevSize: number;
+  opacity: number;
+  prevOpacity: number;
+  hue: number;
+  color: string;
+  prevX: number;
+  prevY: number;
+}
+
+const useShootingStars = () => {
+  const [star, setStar] = useState<StarProps | null>(null);
+  const [trail, setTrail] = useState<{ x: number; y: number }[]>([]);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    const createStar = () => {
-      const { x, y, angle } = getRandomStartPoint();
-      const newStar: ShootingStar = {
-        id: Date.now(),
-        x,
-        y,
-        angle,
-        scale: 1,
-        speed: Math.random() * (maxSpeed - minSpeed) + minSpeed,
-        distance: 0,
-      };
-      setStar(newStar);
+    const createStar = (): StarProps => {
+      const canvas = document.querySelector("canvas");
+      if (!canvas) return {} as StarProps;
 
-      const randomDelay = Math.random() * (maxDelay - minDelay) + minDelay;
-      setTimeout(createStar, randomDelay);
+      const { width, height } = canvas.getBoundingClientRect();
+      const angleRAD = (Math.random() * 6.2831853071795865) | 0;
+      const angle = (angleRAD * 180) / Math.PI;
+      const speed = Math.random() * 6 + 3;
+      const size = Math.random() * 3 + 1;
+      const opacity = Math.random();
+      const hue = Math.random() * 360;
+      const starColor = `hsl(${hue}, 100%, 50%)`;
+
+      return {
+        id: Date.now(),
+        x: Math.random() * width,
+        y: Math.random() * height,
+        angle,
+        prevAngle: angle,
+        speed,
+        prevSpeed: speed,
+        size,
+        prevSize: size,
+        opacity,
+        prevOpacity: opacity,
+        hue,
+        color: starColor,
+        prevX: 0,
+        prevY: 0,
+      };
     };
 
-    createStar();
+    const updateStar = (star: StarProps): StarProps => {
+      const canvas = document.querySelector("canvas");
+      if (!canvas) return star;
 
-    return () => {};
-  }, [minSpeed, maxSpeed, minDelay, maxDelay]);
+      const { width, height } = canvas.getBoundingClientRect();
+      const newX = star.x + Math.cos((star.angle * Math.PI) / 180) * star.speed;
+      const newY = star.y + Math.sin((star.angle * Math.PI) / 180) * star.speed;
 
-  useEffect(() => {
-    const moveStar = () => {
-      if (star) {
-        setStar((prevStar) => {
-          if (!prevStar) return null;
-          const newX =
-            prevStar.x +
-            prevStar.speed * Math.cos((prevStar.angle * Math.PI) / 180);
-          const newY =
-            prevStar.y +
-            prevStar.speed * Math.sin((prevStar.angle * Math.PI) / 180);
-          const newDistance = prevStar.distance + prevStar.speed;
-          const newScale = 1 + newDistance / 100;
-          if (
-            newX < -20 ||
-            newX > window.innerWidth + 20 ||
-            newY < -20 ||
-            newY > window.innerHeight + 20
-          ) {
-            return null;
-          }
-          return {
-            ...prevStar,
-            x: newX,
-            y: newY,
-            distance: newDistance,
-            scale: newScale,
-          };
-        });
+      return {
+        ...star,
+        prevX: star.x,
+        prevY: star.y,
+        x: newX > width ? 0 : newX < 0 ? width : newX,
+        y: newY > height ? 0 : newY < 0 ? height : newY,
+      };
+    };
+
+    const tick = () => {
+      if (Math.random() > 0.8) {
+        setStar(createStar());
+        setTrail([]);
+      } else if (star) {
+        const updatedStar = updateStar(star);
+        setStar(updatedStar);
+        setTrail((prevTrail) =>
+          [...prevTrail, { x: updatedStar.prevX, y: updatedStar.prevY }].slice(
+            -20
+          )
+        );
       }
     };
 
-    const animationFrame = requestAnimationFrame(moveStar);
-    return () => cancelAnimationFrame(animationFrame);
+    intervalRef.current = setInterval(tick, 50);
+
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    };
   }, [star]);
 
+  return { star, trail };
+};
+
+export const ShootingStars = ({
+  className,
+  starColor = "#9E00FF",
+  trailColor = "#2EB9DF",
+  minSpeed = 10,
+  maxSpeed = 30,
+  starWidth = 10,
+  starHeight = 1,
+  ...props
+}: {
+  className?: string;
+  starColor?: string;
+  trailColor?: string;
+  minSpeed?: number;
+  maxSpeed?: number;
+  starWidth?: number;
+  starHeight?: number;
+}) => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const { star, trail } = useShootingStars();
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const resizeCanvas = () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    };
+
+    resizeCanvas();
+    window.addEventListener("resize", resizeCanvas);
+
+    const drawFrame = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Draw trail
+      if (trail.length > 1) {
+        ctx.strokeStyle = trailColor;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(trail[0].x, trail[0].y);
+        for (let i = 1; i < trail.length; i++) {
+          ctx.lineTo(trail[i].x, trail[i].y);
+        }
+        ctx.stroke();
+      }
+
+      // Draw star
+      if (star) {
+        ctx.fillStyle = starColor;
+        ctx.fillRect(star.x, star.y, starWidth, starHeight);
+      }
+    };
+
+    const animationId = requestAnimationFrame(function animate() {
+      drawFrame();
+      requestAnimationFrame(animate);
+    });
+
+    return () => {
+      window.removeEventListener("resize", resizeCanvas);
+      cancelAnimationFrame(animationId);
+    };
+  }, [star, trail, starColor, trailColor, starWidth, starHeight]);
+
   return (
-    <svg
-      ref={svgRef}
-      className={cn("w-full h-full absolute inset-0", className)}
-    >
-      {star && (
-        <rect
-          key={star.id}
-          x={star.x}
-          y={star.y}
-          width={starWidth * star.scale}
-          height={starHeight}
-          fill="url(#gradient)"
-          transform={`rotate(${star.angle}, ${
-            star.x + (starWidth * star.scale) / 2
-          }, ${star.y + starHeight / 2})`}
-        />
-      )}
-      <defs>
-        <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" style={{ stopColor: trailColor, stopOpacity: 0 }} />
-          <stop
-            offset="100%"
-            style={{ stopColor: starColor, stopOpacity: 1 }}
-          />
-        </linearGradient>
-      </defs>
-    </svg>
+    <canvas
+      ref={canvasRef}
+      className={cn("absolute inset-0 h-full w-full", className)}
+      {...props}
+    />
+  );
+};
+
+export const StarsBackground = ({
+  className,
+  ...props
+}: {
+  className?: string;
+}) => {
+  return (
+    <div className={cn("absolute inset-0", className)} {...props}>
+      <ShootingStars />
+    </div>
   );
 };

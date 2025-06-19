@@ -1,6 +1,7 @@
+"use client";
 import { cn } from "@/lib/utils";
 import { AnimatePresence, motion } from "motion/react";
-
+import Link from "next/link";
 import { useState } from "react";
 
 export const HoverEffect = ({
@@ -14,7 +15,7 @@ export const HoverEffect = ({
   }[];
   className?: string;
 }) => {
-  let [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
   return (
     <div
@@ -24,7 +25,7 @@ export const HoverEffect = ({
       )}
     >
       {items.map((item, idx) => (
-        <a
+        <Link
           href={item?.link}
           key={item?.link}
           className="relative group  block p-2 h-full w-full"
@@ -52,7 +53,7 @@ export const HoverEffect = ({
             <CardTitle>{item.title}</CardTitle>
             <CardDescription>{item.description}</CardDescription>
           </Card>
-        </a>
+        </Link>
       ))}
     </div>
   );

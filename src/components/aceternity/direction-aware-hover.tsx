@@ -1,9 +1,8 @@
 "use client";
 
-import { useRef, useState } from "react";
-
-import { AnimatePresence, motion } from "motion/react";
 import { cn } from "@/lib/utils";
+import { motion } from "motion/react";
+import React from "react";
 
 export const DirectionAwareHover = ({
   imageUrl,
@@ -18,9 +17,9 @@ export const DirectionAwareHover = ({
   imageClassName?: string;
   className?: string;
 }) => {
-  const ref = useRef<HTMLDivElement>(null);
+  const ref = React.useRef<HTMLDivElement>(null);
 
-  const [direction, setDirection] = useState<
+  const [direction, setDirection] = React.useState<
     "top" | "bottom" | "left" | "right" | string
   >("left");
 
@@ -29,23 +28,28 @@ export const DirectionAwareHover = ({
   ) => {
     if (!ref.current) return;
 
-    const direction = getDirection(event, ref.current);
-    console.log("direction", direction);
-    switch (direction) {
+    const currentDirection = getDirection(event, ref.current);
+    console.log("direction", currentDirection);
+    switch (currentDirection) {
       case 0:
         setDirection("top");
+
         break;
       case 1:
         setDirection("right");
+
         break;
       case 2:
         setDirection("bottom");
+
         break;
       case 3:
         setDirection("left");
+
         break;
       default:
         setDirection("left");
+
         break;
     }
   };
@@ -58,6 +62,7 @@ export const DirectionAwareHover = ({
     const x = ev.clientX - left - (w / 2) * (w > h ? h / w : 1);
     const y = ev.clientY - top - (h / 2) * (h > w ? w / h : 1);
     const d = Math.round(Math.atan2(y, x) / 1.57079633 + 5) % 4;
+
     return d;
   };
 
@@ -66,52 +71,31 @@ export const DirectionAwareHover = ({
       onMouseEnter={handleMouseEnter}
       ref={ref}
       className={cn(
-        "md:h-96 w-60 h-60 md:w-96 bg-transparent rounded-lg overflow-hidden group/card relative",
+        "md:h-96 w-60  bg-transparent rounded-lg overflow-hidden group/card relative",
         className
       )}
     >
-      <AnimatePresence mode="wait">
-        <motion.div
-          className="relative h-full w-full"
-          initial="initial"
-          whileHover={direction}
-          exit="exit"
-        >
-          <motion.div className="group-hover/card:block hidden absolute inset-0 w-full h-full bg-black/40 z-10 transition duration-500" />
-          <motion.div
-            variants={variants}
-            className="h-full w-full relative bg-gray-50 dark:bg-black"
-            transition={{
-              duration: 0.2,
-              ease: "easeOut",
-            }}
-          >
-            <img
-              alt="image"
-              className={cn(
-                "h-full w-full object-cover scale-[1.15]",
-                imageClassName
-              )}
-              width="1000"
-              height="1000"
-              src={imageUrl}
-            />
-          </motion.div>
-          <motion.div
-            variants={textVariants}
-            transition={{
-              duration: 0.5,
-              ease: "easeOut",
-            }}
-            className={cn(
-              "text-white absolute bottom-4 left-4 z-40",
-              childrenClassName
-            )}
-          >
-            {children}
-          </motion.div>
+      <motion.div
+        className={cn(
+          "group-hover/card:block hidden absolute inset-0 w-full h-full bg-black/40 z-10 transition duration-500",
+          childrenClassName
+        )}
+        initial="initial"
+        whileHover={direction}
+        exit="exit"
+      >
+        <motion.div className="h-full w-full flex justify-center items-center">
+          {children}
         </motion.div>
-      </AnimatePresence>
+      </motion.div>
+
+      <motion.img
+        alt="image"
+        className={cn("h-96 w-full object-cover scale-[1.15]", imageClassName)}
+        width="1000"
+        height="1000"
+        src={imageUrl}
+      />
     </motion.div>
   );
 };

@@ -257,3 +257,23 @@ const Explosion = ({ ...props }: React.HTMLProps<HTMLDivElement>) => {
     </div>
   );
 };
+
+const getRandomParticle = (
+  pos: Vector,
+  dir: Vector,
+  speed: number,
+  ts: number,
+  acceleration: number,
+  border: {
+    height: number;
+    width: number;
+  }
+): Particle => ({
+  id: Math.random(),
+  pos,
+  dir,
+  speed,
+  ts,
+  acceleration,
+  border,
+});

@@ -9,6 +9,7 @@ import React, {
   useRef,
   useState,
 } from "react";
+import { useOutsideClick } from "@/hooks/use-outside-click";
 
 interface ModalContextType {
   open: boolean;
@@ -77,9 +78,9 @@ export const ModalBody = ({
     }
   }, [open]);
 
-  const modalRef = useRef(null);
+  const ref = useRef<HTMLDivElement>(null);
   const { setOpen } = useModal();
-  useOutsideClick(modalRef, () => setOpen(false));
+  useOutsideClick(ref, () => setOpen(false));
 
   return (
     <AnimatePresence>
@@ -101,7 +102,7 @@ export const ModalBody = ({
           <Overlay />
 
           <motion.div
-            ref={modalRef}
+            ref={ref}
             className={cn(
               "min-h-[50%] max-h-[90%] md:max-w-[40%] bg-white dark:bg-neutral-950 border border-transparent dark:border-neutral-800 md:rounded-2xl relative z-50 flex flex-col flex-1 overflow-hidden",
               className
@@ -209,35 +210,9 @@ const CloseIcon = () => {
         strokeLinejoin="round"
         className="text-black dark:text-white h-4 w-4 group-hover:scale-125 group-hover:rotate-3 transition duration-200"
       >
-        <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-        <path d="M18 6l-12 12" />
-        <path d="M6 6l12 12" />
+        <path d="m3 3 18 18" />
+        <path d="m21 3-18 18" />
       </svg>
     </button>
   );
-};
-
-// Hook to detect clicks outside of a component.
-// Add it in a separate file, I've added here for simplicity
-export const useOutsideClick = (
-  ref: React.RefObject<HTMLDivElement>,
-  callback: Function
-) => {
-  useEffect(() => {
-    const listener = (event: any) => {
-      // DO NOTHING if the element being clicked is the target element or their children
-      if (!ref.current || ref.current.contains(event.target)) {
-        return;
-      }
-      callback(event);
-    };
-
-    document.addEventListener("mousedown", listener);
-    document.addEventListener("touchstart", listener);
-
-    return () => {
-      document.removeEventListener("mousedown", listener);
-      document.removeEventListener("touchstart", listener);
-    };
-  }, [ref, callback]);
 };

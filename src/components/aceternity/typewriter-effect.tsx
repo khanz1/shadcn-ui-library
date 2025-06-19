@@ -1,8 +1,8 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { motion, stagger, useAnimate, useInView } from "motion/react";
-import { useEffect } from "react";
+import { motion } from "motion/react";
+import { useEffect, useState } from "react";
 
 export const TypewriterEffect = ({
   words,
@@ -24,51 +24,46 @@ export const TypewriterEffect = ({
     };
   });
 
-  const [scope, animate] = useAnimate();
-  const isInView = useInView(scope);
-  useEffect(() => {
-    if (isInView) {
-      animate(
-        "span",
-        {
-          display: "inline-block",
-          opacity: 1,
-          width: "fit-content",
-        },
-        {
-          duration: 0.3,
-          delay: stagger(0.1),
-          ease: "easeInOut",
-        }
-      );
-    }
-  }, [isInView]);
+  const [currentWordIndex, setCurrentWordIndex] = useState(0);
+  const [currentCharIndex, setCurrentCharIndex] = useState(0);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [displayText, setDisplayText] = useState("");
 
-  const renderWords = () => {
-    return (
-      <motion.div ref={scope} className="inline">
-        {wordsArray.map((word, idx) => {
-          return (
-            <div key={`word-${idx}`} className="inline-block">
-              {word.text.map((char, index) => (
-                <motion.span
-                  initial={{}}
-                  key={`char-${index}`}
-                  className={cn(
-                    `dark:text-white text-black opacity-0 hidden`,
-                    word.className
-                  )}
-                >
-                  {char}
-                </motion.span>
-              ))}
-              &nbsp;
-            </div>
-          );
-        })}
-      </motion.div>
+  useEffect(() => {
+    const currentWord = wordsArray[currentWordIndex];
+    const fullText = currentWord.text.join("");
+
+    const timeout = setTimeout(
+      () => {
+        if (!isDeleting) {
+          // Typing
+          if (currentCharIndex < fullText.length) {
+            setDisplayText(fullText.slice(0, currentCharIndex + 1));
+            setCurrentCharIndex(currentCharIndex + 1);
+          } else {
+            // Finished typing current word, start deleting after a pause
+            setTimeout(() => setIsDeleting(true), 1500);
+          }
+        } else {
+          // Deleting
+          if (currentCharIndex > 0) {
+            setDisplayText(fullText.slice(0, currentCharIndex - 1));
+            setCurrentCharIndex(currentCharIndex - 1);
+          } else {
+            // Finished deleting, move to next word
+            setIsDeleting(false);
+            setCurrentWordIndex((prevIndex) =>
+              prevIndex === wordsArray.length - 1 ? 0 : prevIndex + 1
+            );
+          }
+        }
+      },
+      isDeleting ? 100 : 150
     );
-  };
+
+    return () => clearTimeout(timeout);
+  }, [currentCharIndex, currentWordIndex, isDeleting, wordsArray]);
+
   return (
     <div
       className={cn(
@@ -76,14 +71,12 @@ export const TypewriterEffect = ({
         className
       )}
     >
-      {renderWords()}
+      <span className={wordsArray[currentWordIndex]?.className}>
+        {displayText}
+      </span>
       <motion.span
-        initial={{
-          opacity: 0,
-        }}
-        animate={{
-          opacity: 1,
-        }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
         transition={{
           duration: 0.8,
           repeat: Infinity,
@@ -93,7 +86,7 @@ export const TypewriterEffect = ({
           "inline-block rounded-sm w-[4px] h-4 md:h-6 lg:h-10 bg-blue-500",
           cursorClassName
         )}
-      ></motion.span>
+      />
     </div>
   );
 };
@@ -122,7 +115,7 @@ export const TypewriterEffectSmooth = ({
       <div>
         {wordsArray.map((word, idx) => {
           return (
-            <div key={`word-${idx}`} className="inline-block">
+            <div key={`word-${idx}`} className="inline">
               {word.text.map((char, index) => (
                 <span
                   key={`char-${index}`}
@@ -178,7 +171,7 @@ export const TypewriterEffectSmooth = ({
           repeatType: "reverse",
         }}
         className={cn(
-          "block rounded-sm w-[4px]  h-4 sm:h-6 xl:h-12 bg-blue-500",
+          "block rounded-sm w-4 h-4 sm:h-6 xl:h-12 bg-blue-500",
           cursorClassName
         )}
       ></motion.span>
